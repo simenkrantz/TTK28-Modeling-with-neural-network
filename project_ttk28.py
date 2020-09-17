@@ -7,3 +7,4 @@ from math import sqrt
 # Manual seed for repeatability
 ranSeed = 96554
 torch.manual_seed(ranSeed)
+print("Finished setting up")
