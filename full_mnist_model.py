@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import numpy as np
@@ -8,6 +7,7 @@ from math import sqrt
 
 
 class FullNeuralNetwork:
+    """The neural network trained on MNIST dataset, with standard parameters only."""
     def __init__(
         self,
         num_epochs,
@@ -45,6 +45,7 @@ def main():
     X, y = loadlocal_mnist(train_images_path, train_labels_path)
 
     print('Dimensions: %s x %s' % (X.shape[0], X.shape[1]))
+    print(FullNeuralNetwork.__doc__)
 
 
 if __name__ == "__main__":
