@@ -1,3 +1,4 @@
+# Standard libraries
 import pandas as pd
 import torch
 import torchvision as tv
@@ -6,6 +7,8 @@ from mlxtend.data import loadlocal_mnist
 from torch.utils.data import DataLoader as dl
 from math import sqrt
 
+# Personal libraries
+from datahandler import DataHandler
 
 train_images_path = 'ubyte_files/train-images-idx3-ubyte',
 train_labels_path = 'ubyte_files/train-labels-idx1-ubyte',
@@ -47,9 +50,12 @@ def test():
     examples = enumerate(test_loader)
     
     # Return values: batch_idx, (example_data, example_targets)
-    _, (example_data, _) = next(examples)
+    _, (example_data, example_targets) = next(examples)
 
     print("\nSize test data batch:\n"+str(example_data.shape)+"\n")
+
+    DH = DataHandler()
+    DH.plotter(6, example_data, example_targets, True, "test.pdf")
 
 
 
@@ -59,8 +65,8 @@ def main():
     ran_seed = 96554
     torch.manual_seed(ran_seed)
 
-    train_images_path = 'ubyte_files/train-images-idx3-ubyte'
-    train_labels_path = 'ubyte_files/train-labels-idx1-ubyte'
+    train_images_path = 'MNIST/raw/train-images-idx3-ubyte'
+    train_labels_path = 'MNIST/raw/train-labels-idx1-ubyte'
 
     X, _ = loadlocal_mnist(train_images_path, train_labels_path)
 
