@@ -11,31 +11,31 @@ class DataHandler:
         pass
 
     def save_to_file(self, torch_tensor, filename):
-        """File type: .pt"""
-        torch.save(torch_tensor, filename)
+        """Save to SavedFiles/__filename__
+        File type: .pt"""
+        torch.save(torch_tensor, 'SavedFiles/'+filename)
 
     def load_file(self, filename):
         """File type: .pt"""
-        torch.load(filename)
+        torch.load('SavedFiles/'+filename)
 
-    def save_figure(self, filename, filepath):
-        plt.savefig(filepath+filename, bbox_inches='tight')
+    def save_figure(self, filename):
+        plt.savefig('SavedFiles/'+filename, bbox_inches='tight')
 
-    # num_subplot must be even int
-    def plotter(self, num_subplots, torch_data, torch_targets, bool_save_fig, filename, filepath="SavedFiles/"):
-        """Plot PyTorch data"""
-        plt.figure(figsize=(16,9))
-        for i in range(num_subplots):
-            plt.subplot(2, num_subplots//2, i+1)
-            plt.tight_layout()
-            plt.imshow(torch_data[i][0], cmap='gray', interpolation='none')
-            plt.title("Truth: {}".format(torch_targets[i]))
-            plt.xticks([])
-            plt.yticks([])
-        if(bool_save_fig):
-            self.save_figure(filename, filepath)
-        else:
-            plt.show()
+    # Save figure to SavedFiles/__filename__
+    def compare_train_test_losses(self, num_epochs, train_counter, train_losses, test_counter, test_losses, filename):
+        plt.figure()
+        plt.title("Training and test losses after {} epochs".format(num_epochs))
+        plt.plot(train_counter, train_losses, color='blue')
+        plt.scatter(test_counter, test_losses, color='red')
+        plt.legend(['Train loss', 'Test loss'], loc='upper right')
+        plt.xlabel("Training examples the model has seen")
+        plt.ylabel("Neg. log likelihood loss")
+        self.save_figure(filename)
+        print("Figure saved to path: SavedFiles/{}".format(filename))
+
+
+
 
 def main():
     print(DataHandler.__doc__)
