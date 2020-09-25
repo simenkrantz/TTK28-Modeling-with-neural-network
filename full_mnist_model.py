@@ -1,10 +1,8 @@
 # Standard libraries
-import pandas as pd
 import torch
+import collections
 import torchvision as tv
-import numpy as np
-from torch.utils.data import DataLoader as dl
-from math import sqrt
+import torch.optim as optim
 
 # Personal libraries
 from datahandler import DataHandler
@@ -13,7 +11,7 @@ from datahandler import DataHandler
 class FullNeuralNetwork(torch.nn.Module):
     """The full neural network model, used for comparison.
     
-    Two 2D convolutional layers are followed by two linear, fully-connected layers.
+    Two 2D convolutional layers are folellowed by two linear, fully-connected layers.
     No regularization is used, this is applied in a different model.
     Activation function - rectified linear units (ReLUs).
     Credited: https://nextjournal.com/gkoehler/pytorch-mnist, accessed 2020-09-24
@@ -43,7 +41,16 @@ class FullNeuralNetwork(torch.nn.Module):
         tensor = self.ReLU(self.linear_layer_1(tensor))
         return torch.nn.functional.log_softmax(self.linear_layer_2(tensor))
 
-    def train_model(self, learning_rate, momentum, epoch, batch_size, log_interval):
+    def train_model(
+        self,
+        train_losses,
+        train_counter,
+        optimizer,
+        learning_rate,
+        momentum,
+        epoch,
+        batch_size,
+        log_interval):
         """train_model -> [train_losses, train_counter, len_train_set]
         Training of the full NN model on MNIST dataset.
         Normalize parameters:
@@ -61,10 +68,6 @@ class FullNeuralNetwork(torch.nn.Module):
             batch_size=batch_size, shuffle=True)
         len_dataset = len(train_loader.dataset)
 
-        optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate, momentum=momentum)
-        train_losses = []
-        train_counter = []
-
         self.train()
         for batch_idx, (data, target) in enumerate(train_loader):
             optimizer.zero_grad()
@@ -75,14 +78,20 @@ class FullNeuralNetwork(torch.nn.Module):
                 print("Epoch {0}: {1:.1f}%\tLoss: {2:.5f}".format(
                     epoch, 100.*batch_idx/len(train_loader), loss.item()))
                 train_losses.append(loss.item())
-                train_counter.append(batch_idx*64 + (epoch-1)*len_dataset)
+                train_counter.append((batch_idx*64) + ((epoch-1)*len_dataset))
                 DH.save_to_file(self.state_dict(), 'full_model.pth')
                 DH.save_to_file(optimizer.state_dict(), 'full_optimizer.pth')
 
         return (train_losses, train_counter, len_dataset)
 
 
-    def test_model(self, len_train_set, num_epochs, batch_size):
+    def test_model(
+        self,
+        test_losses,
+        test_counter,
+        len_train_set,
+        num_epochs,
+        batch_size):
         """test_model -> [test_losses, test_counter]
         """
         test_loader = torch.utils.data.DataLoader(
@@ -92,10 +101,6 @@ class FullNeuralNetwork(torch.nn.Module):
                 tv.transforms.Normalize((0.1307,), (0.3081,))])),
             batch_size=batch_size, shuffle=True)
         len_dataset = len(test_loader.dataset)
-        test_losses = []
-        test_counter = [i*len_train_set for i in range(num_epochs+1)]
-
-        self.eval()
         loss = 0
         correct = 0
 
@@ -112,7 +117,17 @@ class FullNeuralNetwork(torch.nn.Module):
             loss, correct, len_dataset, 100.*correct/len_dataset))
 
         return (test_losses, test_counter)
-        
+
+def flatten(l):
+    """Flatten any list.
+    Credited https://stackoverflow.com/a/2158532.
+    
+    Parameter l: List"""
+    for i in l:
+        if isinstance(i, collections.Iterable) and not isinstance(i, (str, bytes)):
+            yield from flatten(i)
+        else:
+            yield i
 
 def main():
     torch.backends.cudnn.enabled = False
@@ -132,20 +147,55 @@ def main():
     DH = DataHandler()
     NN = FullNeuralNetwork()
 
-    for epoch in range(1, num_epochs + 1):
+    
+    train_losses = []
+    train_counter = []
+    test_losses = []
+    # 60000 being len(train_loader.dataset)
+    test_counter = [i*60000 for i in range(num_epochs+1)]
+
+    optimizer = optim.SGD(NN.parameters(),lr=learning_rate,momentum=momentum)
+
+    for epoch in range(num_epochs + 1):
         (train_loss, train_count, len_train_data) = NN.train_model(
-            learning_rate,momentum,epoch,batch_size_train,log_interval)
+            train_losses, train_counter, optimizer, learning_rate,momentum,epoch,batch_size_train,log_interval)
+        
+        train_losses.append(train_loss)
+        train_counter.append(train_count)
+
         (test_loss, test_count) = NN.test_model(
-            len_train_data, num_epochs, batch_size_test)
+            test_losses, test_counter, len_train_data, num_epochs, batch_size_test)
+            
+        test_losses.append(test_loss)
+        test_counter.append(test_count)
 
-    DH.save_to_file(train_loss, 'train_loss_full_model.pt')
-    DH.save_to_file(train_count, 'train_count_full_model.pt')
-    DH.save_to_file(test_loss, 'test_loss_full_model.pt')
-    DH.save_to_file(test_count, 'test_count_full_model.pt')
+    flatten(train_losses)
+    flatten(train_counter)
+    flatten(test_losses)
+    flatten(test_counter)
 
+    DH.save_to_file(train_losses, 'train_loss_full_model.pt')
+    DH.save_to_file(train_counter, 'train_count_full_model.pt')
+    DH.save_to_file(test_losses, 'test_loss_full_model.pt')
+    DH.save_to_file(test_counter, 'test_count_full_model.pt')
+
+    print("\n\nFinished saving\n\n")
+    
+    train_counter = DH.load_file('train_count_full_model.pt')
+    train_losses = DH.load_file('train_loss_full_model.pt')
+    test_counter = DH.load_file('test_count_full_model.pt')
+    test_losses = DH.load_file('test_loss_full_model.pt')
+
+    print("Train count size {}\nTrain loss size {}\nTest count size {}\nTest loss size {}".format(
+        len(train_counter),len(train_losses),len(test_counter),len(test_losses)
+    ))
+
+    ###
+    # Doesn't work -- unable to plot and scatter training and test data
+    #
     #DH.compare_train_test_losses(
-    #    num_epochs, train_count, train_loss, test_count, test_loss,'test_train_loss_full_model.png')
-
+    #    num_epochs, train_counter, train_losses, test_counter, test_losses,'test_train_loss_full_model.png')
+    ###
 
 if __name__ == "__main__":
     main()
