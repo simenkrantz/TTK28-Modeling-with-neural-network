@@ -5,7 +5,7 @@ import torchvision as tv
 import torch.optim as optim
 
 # Personal libraries
-from datahandler import DataHandler
+from datahandler import DataHandler, bcolors
 
 
 class FullNeuralNetwork(torch.nn.Module):
@@ -75,8 +75,8 @@ class FullNeuralNetwork(torch.nn.Module):
             loss.backward()
             optimizer.step()
             if batch_idx % log_interval == 0:
-                print("Epoch {0}: {1:.1f}%\tLoss: {2:.5f}".format(
-                    epoch, 100.*batch_idx/len(train_loader), loss.item()))
+                print("Epoch {}: {1:.1f}%\tLoss: {2:.5f}".format(
+                    epoch+1, 100.*batch_idx/len(train_loader), loss.item()))
                 train_losses.append(loss.item())
                 train_counter.append((batch_idx*64) + ((epoch-1)*len_dataset))
                 DH.save_to_file(self.state_dict(), 'full_model.pth')
@@ -178,24 +178,30 @@ def main():
     DH.save_to_file(train_counter, 'train_count_full_model.pt')
     DH.save_to_file(test_losses, 'test_loss_full_model.pt')
     DH.save_to_file(test_counter, 'test_count_full_model.pt')
-
-    print("\n\nFinished saving\n\n")
     
-    train_counter = DH.load_file('train_count_full_model.pt')
-    train_losses = DH.load_file('train_loss_full_model.pt')
-    test_counter = DH.load_file('test_count_full_model.pt')
-    test_losses = DH.load_file('test_loss_full_model.pt')
-
-    print("Train count size {}\nTrain loss size {}\nTest count size {}\nTest loss size {}".format(
+    print("\nFinished saving\n\n")
+    
+    #train_counter = DH.load_file('train_count_full_model.pt')
+    #train_losses = DH.load_file('train_loss_full_model.pt')
+    #test_counter = DH.load_file('test_count_full_model.pt')
+    #test_losses = DH.load_file('test_loss_full_model.pt')
+    
+    print("Train count size {}\tTrain loss size {}\nTest count size {}\tTest loss size {}\n\n".format(
         len(train_counter),len(train_losses),len(test_counter),len(test_losses)
     ))
 
+    print("Train counter:\n{}\nTrain losses:\n{}\nTest counter:\n{}\nTest losses\n{}".format(
+        type(train_counter), type(train_losses), type(test_counter), type(test_losses)
+    ))
+
     ###
-    # Doesn't work -- unable to plot and scatter training and test data
+    # TODO:
+    #   Doesn't work -- unable to plot and scatter training and test data
     #
     #DH.compare_train_test_losses(
     #    num_epochs, train_counter, train_losses, test_counter, test_losses,'test_train_loss_full_model.png')
     ###
+    print(f"{bcolors.OKGREEN}\nModel finished !\n{bcolors.ENDC}")
 
 if __name__ == "__main__":
     main()
