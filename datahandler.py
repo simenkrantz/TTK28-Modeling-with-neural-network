@@ -1,5 +1,6 @@
 import torch
 import matplotlib.pyplot as plt
+import numpy as np
 
 class bcolors:
     HEADER = '\033[95m'
@@ -117,13 +118,36 @@ def compare_training_losses_full_epochs():
     DH.save_figure('compare_train_losses.pdf')
 
 
+def compare_training_difference():
+    DH = DataHandler()
+    train_count_full = DH.load_file("Full_Model/train_count_full_model_full_epochs.pt")
+    train_loss_full = DH.load_file("Full_Model/train_loss_full_model_full_epochs.pt")
+
+    train_loss_partly = DH.load_file("Partly_Regularization/train_loss_regularized_full_epochs.pt")
+    train_loss_reg = DH.load_file("Regularized_5_layers_2_dropouts/train_loss_regularized_full_epochs.pt")
+
+    diff_partly = np.subtract(train_loss_partly, train_loss_full)
+    diff_reg = np.subtract(train_loss_reg, train_loss_full)
+
+    plt.figure()
+    plt.title("Comparing training losses compared to 'Full model'")
+    plt.plot(train_count_full, diff_partly, color='blue', linewidth=0.8)
+    plt.plot(train_count_full, diff_reg, color='red', linewidth=0.8)
+    plt.axhline(y=0, color='green', ls=':')
+    plt.axhline(y=(sum(diff_partly)/len(diff_partly)), color='royalblue', ls='--')
+    plt.axhline(y=(sum(diff_reg)/len(diff_reg)), color='salmon', ls='--')
+    plt.legend(['Difference with one dropout layer', 'Difference with two dropout layers',
+    'Zero difference', 'Average of one dropout layer', 'Average of two dropout layers'], loc='lower right')
+    plt.xlabel("Training examples the model has seen")
+    plt.ylabel("Neg. log likelihood loss")
+    DH.save_figure('differences_train_losses.pdf')
 
 
 
 def main():
     print(DataHandler.__doc__)
 
-    compare_training_losses_full_epochs()
+    compare_training_difference()
 
 if __name__ == "__main__":
     main()
