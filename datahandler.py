@@ -26,7 +26,7 @@ class DataHandler:
         torch.save(torch_tensor, 'SavedFiles/'+filename)
 
     def load_file(self, filename):
-        """File type: .pt"""
+        """File type: .pt or .pth"""
         return torch.load('SavedFiles/'+filename)
 
     def save_figure(self, filename):
@@ -37,7 +37,7 @@ class DataHandler:
         # TODO:
         #   Unable to plot the training data
         #   Unable to scatter test data
-        plt.figure()
+        fig = plt.figure()
         plt.title("Training and test losses after {} epochs".format(num_epochs))
         print("\nPlotting...\n")
         plt.plot(train_counter, train_losses, color='blue')
@@ -50,6 +50,26 @@ class DataHandler:
         self.save_figure(filename)
         print("Figure saved to path: SavedFiles/{}".format(filename))
 
+    def compare_predict(self, NN, test_loader, model_name, filename):
+        NN.load_state_dict(self.load_file(model_name))
+        
+        examples = enumerate(test_loader)
+
+        _, (ex_data, _) = next(examples)
+
+        with torch.no_grad():
+            out = NN(ex_data)
+
+        plt.figure()
+        for i in range(300, 306):
+            plt.subplot(2,3,i-299)
+            plt.tight_layout()
+            plt.imshow(ex_data[i][0], cmap='gray', interpolation='none')
+            plt.title("Prediction: {}".format(
+                out.data.max(1, keepdim=True)[1][i].item()))
+            plt.xticks([])
+            plt.yticks([])
+        self.save_figure(filename)
 
 
 

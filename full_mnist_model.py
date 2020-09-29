@@ -4,6 +4,7 @@ import collections
 import torchvision as tv
 import torch.optim as optim
 
+
 # Personal libraries
 from datahandler import DataHandler, bcolors
 
@@ -75,8 +76,8 @@ class FullNeuralNetwork(torch.nn.Module):
             loss.backward()
             optimizer.step()
             if batch_idx % log_interval == 0:
-                print("Epoch {}: {1:.1f}%\tLoss: {2:.5f}".format(
-                    epoch+1, 100.*batch_idx/len(train_loader), loss.item()))
+                print("Epoch {0}: {1:.1f}%\tLoss: {2:.5f}".format(
+                    epoch, 100.*batch_idx/len(train_loader), loss.item()))
                 train_losses.append(loss.item())
                 train_counter.append((batch_idx*64) + ((epoch-1)*len_dataset))
                 DH.save_to_file(self.state_dict(), 'full_model.pth')
@@ -118,16 +119,42 @@ class FullNeuralNetwork(torch.nn.Module):
 
         return (test_losses, test_counter)
 
-def flatten(l):
-    """Flatten any list.
-    Credited https://stackoverflow.com/a/2158532.
+
+def run_few_epochs(NN, DH, num_epochs):
+    batch_size_train = 64
+    batch_size_test = 1000
+    learning_rate = 0.01
+    momentum = 0.5
+    log_interval = 10
+
+    train_losses = []
+    train_counter = []
+    test_losses = []
+    # 60000 being len(train_loader.dataset)
+    test_counter = [i*60000 for i in range(num_epochs+1)]
     
-    Parameter l: List"""
-    for i in l:
-        if isinstance(i, collections.Iterable) and not isinstance(i, (str, bytes)):
-            yield from flatten(i)
-        else:
-            yield i
+    optimizer = optim.SGD(NN.parameters(),lr=learning_rate,momentum=momentum)
+
+    (test_losses, test_counter) = NN.test_model(
+            test_losses, test_counter, 60000, num_epochs, batch_size_test)
+
+    for epoch in range(1, num_epochs+1):
+        (train_losses, train_counter, len_train_data) = NN.train_model(
+            train_losses, train_counter, optimizer, learning_rate, momentum, epoch, batch_size_train, log_interval)
+        
+        (test_losses, test_counter) = NN.test_model(
+            test_losses, test_counter, len_train_data, num_epochs, batch_size_test)
+
+    DH.save_to_file(train_losses, 'train_loss_full_model.pt')
+    DH.save_to_file(train_counter, 'train_count_full_model.pt')
+    DH.save_to_file(test_losses, 'test_loss_full_model.pt')
+    DH.save_to_file(test_counter, 'test_count_full_model.pt')
+    
+    DH.compare_train_test_losses(
+        num_epochs, train_counter, train_losses, test_counter, test_losses,'test_train_loss_full_model.png')
+
+    print("\nFinished running few epochs\n\n")
+
 
 def main():
     torch.backends.cudnn.enabled = False
@@ -136,72 +163,53 @@ def main():
     ran_seed = 96554
     torch.manual_seed(ran_seed)
 
-    num_epochs = 3
     batch_size_train = 64
     batch_size_test = 1000
-
     learning_rate = 0.01
     momentum = 0.5
     log_interval = 10
 
+    #test_loader = torch.utils.data.DataLoader(
+                tv.datasets.MNIST("./", train=False, download=False,
+                    transform=tv.transforms.Compose([
+                    tv.transforms.ToTensor(),
+                    tv.transforms.Normalize((0.1307,), (0.3081,))])),
+                batch_size=1000, shuffle=True)
+
     DH = DataHandler()
-    NN = FullNeuralNetwork()
+    #NN = FullNeuralNetwork()
 
-    
-    train_losses = []
-    train_counter = []
-    test_losses = []
-    # 60000 being len(train_loader.dataset)
-    test_counter = [i*60000 for i in range(num_epochs+1)]
+    #run_few_epochs(NN, DH, num_epochs = 3)
 
-    optimizer = optim.SGD(NN.parameters(),lr=learning_rate,momentum=momentum)
+    #DH.compare_predict(NN, test_loader, "full_model.pth","compare_predict_3_epochs.png")
 
-    for epoch in range(num_epochs + 1):
-        (train_loss, train_count, len_train_data) = NN.train_model(
-            train_losses, train_counter, optimizer, learning_rate,momentum,epoch,batch_size_train,log_interval)
-        
-        train_losses.append(train_loss)
-        train_counter.append(train_count)
+    train_losses = DH.load_file("train_loss_full_model.pt")
+    train_counter = DH.load_file("train_count_full_model.pt")
+    test_losses = DH.load_file("test_loss_full_model.pt")
+    test_counter = DH.load_file("test_count_full_model.pt")
 
-        (test_loss, test_count) = NN.test_model(
-            test_losses, test_counter, len_train_data, num_epochs, batch_size_test)
-            
-        test_losses.append(test_loss)
-        test_counter.append(test_count)
+    # Continue training for 4 more epochs
+    NN_cont = FullNeuralNetwork()
+    NN_cont.load_state_dict(DH.load_file("full_model.pth"))
+    optimizer_cont = optim.SGD(NN_cont.parameters(), lr=learning_rate, momentum=momentum)
+    optimizer_cont.load_state_dict(DH.load_file("full_optimizer.pth"))
 
-    flatten(train_losses)
-    flatten(train_counter)
-    flatten(test_losses)
-    flatten(test_counter)
+    for epoch in range(4, 8):
+        test_counter.append(epoch*60000)
+        (train_losses, train_counter, len_train_data) = NN_cont.train_model(
+            train_losses,train_counter,optimizer_cont,learning_rate,momentum,epoch,batch_size_train,log_interval)
+        (test_losses, test_counter) = NN_cont.test_model(
+            test_losses,test_counter,len_train_data,7,batch_size_test)
 
-    DH.save_to_file(train_losses, 'train_loss_full_model.pt')
-    DH.save_to_file(train_counter, 'train_count_full_model.pt')
-    DH.save_to_file(test_losses, 'test_loss_full_model.pt')
-    DH.save_to_file(test_counter, 'test_count_full_model.pt')
-    
-    print("\nFinished saving\n\n")
-    
-    #train_counter = DH.load_file('train_count_full_model.pt')
-    #train_losses = DH.load_file('train_loss_full_model.pt')
-    #test_counter = DH.load_file('test_count_full_model.pt')
-    #test_losses = DH.load_file('test_loss_full_model.pt')
-    
-    print("Train count size {}\tTrain loss size {}\nTest count size {}\tTest loss size {}\n\n".format(
-        len(train_counter),len(train_losses),len(test_counter),len(test_losses)
-    ))
+    DH.save_to_file(train_losses,"train_loss_full_model_full_epochs.pt")
+    DH.save_to_file(train_counter,"train_count_full_model_full_epochs.pt")
+    DH.save_to_file(test_losses,"test_loss_full_model_full_epochs.pt")
+    DH.save_to_file(test_counter,"test_count_full_model_full_epochs.pt")
 
-    print("Train counter:\n{}\nTrain losses:\n{}\nTest counter:\n{}\nTest losses\n{}".format(
-        type(train_counter), type(train_losses), type(test_counter), type(test_losses)
-    ))
+    DH.compare_train_test_losses(
+        7,train_counter,train_losses,test_counter,test_losses,"test_train_loss_full_model_full_epoch.png")
 
-    ###
-    # TODO:
-    #   Doesn't work -- unable to plot and scatter training and test data
-    #
-    #DH.compare_train_test_losses(
-    #    num_epochs, train_counter, train_losses, test_counter, test_losses,'test_train_loss_full_model.png')
-    ###
-    print(f"{bcolors.OKGREEN}\nModel finished !\n{bcolors.ENDC}")
+    print(f"{bcolors.OKGREEN}\nMain finished !\n{bcolors.ENDC}")
 
 if __name__ == "__main__":
     main()
