@@ -34,21 +34,18 @@ class DataHandler:
 
     # Save figure to SavedFiles/__filename__
     def compare_train_test_losses(self, num_epochs, train_counter, train_losses, test_counter, test_losses, filename):
-        # TODO:
-        #   Unable to plot the training data
-        #   Unable to scatter test data
-        fig = plt.figure()
+        plt.figure()
         plt.title("Training and test losses after {} epochs".format(num_epochs))
-        print("\nPlotting...\n")
-        plt.plot(train_counter, train_losses, color='blue')
         print("\nScattering...\n")
         plt.scatter(test_counter, test_losses, color='red')
+        print("\nPlotting...\n")
+        plt.plot(train_counter, train_losses, color='blue')
         plt.legend(['Train loss', 'Test loss'], loc='upper right')
         plt.xlabel("Training examples the model has seen")
         plt.ylabel("Neg. log likelihood loss")
         print("\nSaving figure...\n")
         self.save_figure(filename)
-        print("Figure saved to path: SavedFiles/{}".format(filename))
+        print(f"{bcolors.OKBLUE}Figure saved to path: SavedFiles/{filename}{bcolors.ENDC}")
 
     def compare_predict(self, NN, test_loader, model_name, filename):
         NN.load_state_dict(self.load_file(model_name))
@@ -70,6 +67,11 @@ class DataHandler:
             plt.xticks([])
             plt.yticks([])
         self.save_figure(filename)
+
+
+def compare_full_epochs():
+    #TODO
+    pass
 
 
 
