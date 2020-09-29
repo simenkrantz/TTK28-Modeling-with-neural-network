@@ -69,14 +69,61 @@ class DataHandler:
         self.save_figure(filename)
 
 
-def compare_full_epochs():
-    #TODO
-    pass
+def compare_test_losses_full_epochs():
+    DH = DataHandler()
+    test_count_full = DH.load_file("Full_Model/test_count_full_model_full_epochs.pt")
+    test_loss_full = DH.load_file("Full_Model/test_loss_full_model_full_epochs.pt")
+
+    test_count_partly = DH.load_file("Partly_Regularization/test_count_full_regularized_epochs.pt")
+    test_loss_partly = DH.load_file("Partly_Regularization/test_loss_full_regularized_epochs.pt")
+
+    test_count_reg = DH.load_file("Regularized_5_layers_2_dropouts/test_count_full_regularized_epochs.pt")
+    test_loss_reg = DH.load_file("Regularized_5_layers_2_dropouts/test_loss_full_regularized_epochs.pt")
+
+
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    plt.title("Comparing the test losses for the three models")
+    ax1.scatter(test_count_full, test_loss_full, color='blue')
+    ax1.scatter(test_count_partly, test_loss_partly, color='red')
+    ax1.scatter(test_count_reg, test_loss_reg, color='green')
+    plt.legend(['Full model', 'One dropout layer', 'Two dropout layers'], loc='upper right')
+    plt.xlabel("Training examples the model has seen")
+    plt.ylabel("Neg. log likelihood loss")
+    DH.save_figure('compare_test_losses_full_epochs.png')
+    
+
+    print(f"{bcolors.OKGREEN}Finished comparing full epochs{bcolors.ENDC}\n{bcolors.OKBLUE}File saved\n{bcolors.ENDC}")
+
+def compare_training_losses_full_epochs():
+    DH = DataHandler()
+    train_count_full = DH.load_file("Full_Model/train_count_full_model_full_epochs.pt")
+    train_loss_full = DH.load_file("Full_Model/train_loss_full_model_full_epochs.pt")
+
+    train_count_partly = DH.load_file("Partly_Regularization/train_count_regularized_full_epochs.pt")
+    train_loss_partly = DH.load_file("Partly_Regularization/train_loss_regularized_full_epochs.pt")
+
+    train_count_reg = DH.load_file("Regularized_5_layers_2_dropouts/train_count_regularized_full_epochs.pt")
+    train_loss_reg = DH.load_file("Regularized_5_layers_2_dropouts/train_loss_regularized_full_epochs.pt")
+
+    plt.figure()
+    plt.title("Comparing the train losses for the three models")
+    plt.plot(train_count_full, train_loss_full, color='royalblue', linewidth=0.75)
+    plt.plot(train_count_partly, train_loss_partly, color='salmon', linewidth=0.75)
+    plt.plot(train_count_reg, train_loss_reg, color='limegreen', linewidth=0.75)
+    plt.legend(['Full model', 'One dropout layer', 'Two dropout layers'], loc='upper right')
+    plt.xlabel("Training examples the model has seen")
+    plt.ylabel("Neg. log likelihood loss")
+    DH.save_figure('compare_train_losses.pdf')
+
+
 
 
 
 def main():
     print(DataHandler.__doc__)
+
+    compare_training_losses_full_epochs()
 
 if __name__ == "__main__":
     main()
